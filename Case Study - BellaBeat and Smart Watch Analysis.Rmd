@@ -1,0 +1,265 @@
+---
+title: "Case Study - BellaBeat and SmartWatch Analysis"
+author: "Bryan Kim"
+date: "2023-10-29"
+output: html_document
+resource_files:
+- dailyActivity_merged.csv
+- sleepDay_merged.csv
+- Smart watch prices.csv
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Installing packages and opening libraries
+
+```{r tidyverse}
+install.packages("tidyverse")
+install.packages("data.table")
+library(tidyverse)
+library(data.table)
+```
+## Importing Datasets
+```{r}
+activity <- read.csv("C:/Datasets/dailyActivity_merged.csv")
+sleep <- read.csv("C:/Datasets/Sleepday_merged.csv")
+prices <- read.csv("C:/Datasets/Smart watch prices.csv")
+```
+## Preview Datasets
+```{r}
+head(activity)
+str(activity)
+
+head(sleep)
+str(sleep)
+
+head(prices)
+str(prices)
+```
+### Looking at dataset names to clean and rename
+```{r}
+colnames(activity)
+colnames(sleep)
+colnames(prices)
+```
+### Clean Names
+```{r}
+a <- rename_with(activity, tolower)
+s <- rename_with(sleep, tolower)
+p <- rename_with(prices, tolower)
+```
+#### Set Date Name and Time to same Format
+```{r}
+a <- a %>%
+  rename(date = activitydate) %>%
+  mutate(date = as_date(date, format = "%m/%d/%Y"))
+s <- s %>%
+  rename(date = sleepday) %>%
+  mutate(date = as_date(date, format = "%m/%d/%Y %I:%M:%S %p"))
+```
+#### Ensure proper Date and Time Format
+```{r}
+head(a)
+head(s)
+```
+## Verifying unique Id's & Smart Watch Models vs Price Due to Multiple Price Options
+```{r}
+n_distinct(a$id)
+n_distinct(s$id)
+n_distinct(p[2, 13])
+```
+## Clean Data, Looking for Duplicates
+```{r}
+sum(duplicated(a))
+sum(duplicated(s))
+sum(duplicated(p[2, 13]))
+```
+### Remove Duplicates, 0's, and Blank Rows in Datasets to remove non-usage and invalid data.
+```{r}
+a["totalsteps"][a["totalsteps"] == 0] <- NA
+a_clean <- a %>%
+  distinct() %>%
+  drop_na()
+
+s_clean <- s %>%
+  distinct() %>%
+  drop_na()
+
+p_clean <- p[!apply(p == "", 1, all),]
+p_clean <- p_clean %>%
+  distinct() %>%
+  drop_na()
+
+p_clean <- unique(p_clean[ , c('brand', 'model', 'price..usd.')])
+```
+### Verify Duplicates got removed
+```{r}
+sum(duplicated(a_clean))
+sum(duplicated(s_clean))
+sum(duplicated(p_clean))
+```
+### Find out range of values and s.d. to reduce outliers
+```{r}
+range(a_clean$totalsteps)
+range(s_clean$totaltimeinbed)
+range(p_clean$price..usd.)
+```
+## Smartwatch Price for each Brand - Cleaning extra spaces and eliminating special characters
+```{r}
+p_trimmed <- p_clean %>%
+  mutate(price..usd.=str_squish(price..usd.))
+
+p_trimmed$price..usd. = as.numeric(gsub("[$,]", "", p_trimmed$price..usd.))
+
+range(p_trimmed$price..usd.)
+```
+
+#### Find Interquartile range and Quartiles
+```{r}
+a_25 <- quantile(a_clean$totalsteps, .25)
+a_75 <- quantile(a_clean$totalsteps, .75)
+s_25 <- quantile(s_clean$totaltimeinbed, .25)
+s_75 <- quantile(s_clean$totaltimeinbed, .75)
+iqr_a <- IQR(a_clean$totalsteps)
+iqr_s <- IQR(s_clean$totaltimeinbed)
+```
+#### Calculated lower and upper limits for outliers. However, decided to keep data due to not being able to determine if people slept an hour or 16 hours in a given day and there were values above the upper limit for activity from more active days.
+```{r}
+a_lower <- a_25 - 1.5*(iqr_a)
+a_upper <- a_75 + 1.5*(iqr_a)
+s_lower <- s_25 - 1.5*(iqr_s)
+s_upper <- s_75 + 1.5*(iqr_s)
+
+head(a_lower)
+head(a_upper)
+head(s_lower)
+head(s_upper)
+```
+
+## Categorize amount of activity and sleep by each ID & rename the ID's from 1
+```{r}
+a_s <- merge(a_clean, s_clean, by = c("id", "date"))
+a_s <- a_s %>% group_by(id) %>% mutate(id = cur_group_id())
+
+head(a_s)
+```
+
+## Finding averages for Steps/Day vs Calories/Day of Smart Watch Prices by Brand
+```{r}
+a_s_avg <- a_s %>%
+  group_by(id) %>%
+  summarize(steps_avg = mean(totalsteps), sleep_avg = mean(totalminutesasleep), sedentary_avg = mean(sedentaryminutes), calories_avg = mean(calories), daily_use = sum(n()))
+
+head(a_s_avg)
+
+p_avg <- p_trimmed %>%
+  group_by(brand) %>%
+  summarize(avg_price = mean(price..usd.))
+
+head(p_avg)
+```
+
+## Categorizing SmartWatches by less than, more than, or equal to Bellabeat Ivy ($249)
+```{r}
+p_avg_brand <- p_avg %>%
+  select(brand, avg_price) %>%
+  mutate(p_avg_brand = case_when(
+    avg_price < 249 ~ "Less than Ivy",
+    avg_price == 249 ~ "Same as Ivy",
+    avg_price > 249 ~ "More than Ivy"
+  ))
+
+head(p_avg_brand)
+```
+## Grouping brands by prices
+```{r}
+p_avg_brand_percent <- p_avg_brand %>%
+  group_by(p_avg_brand) %>%
+  summarise(total = n()) %>%
+  mutate(sum = sum(total)) %>%
+  group_by(p_avg_brand) %>%
+  summarise(percent = total/sum) %>%
+  mutate(labels = scales::percent(percent))
+
+p_avg_brand_percent$p_avg_brand <- factor(p_avg_brand_percent$p_avg_brand, levels = c("More than Ivy", "Same as Ivy", "Less than Ivy"))
+
+head(p_avg_brand_percent)
+```
+
+## Total Minutes 
+```{r}
+a_s_avg %>%
+    group_by(id, steps_avg) %>%
+    ggplot(aes(id, steps_avg)) +
+    geom_col(fill = "#f38488") + 
+    geom_hline(yintercept = 7500) +
+    labs(title = "Daily Steps", x = "User Id", y = "Average Steps") +
+    theme(plot.title = element_text(hjust = 0.5))
+a_s_avg %>%
+    group_by(id, sleep_avg) %>%
+    ggplot(aes(id, sleep_avg)) +
+    geom_col(fill = "#344d70") + 
+    geom_hline(yintercept = 480) +
+    labs(title = "Daily Sleep", x = "User Id", y = "Average Asleep") +
+    theme(plot.title = element_text(hjust = 0.5))
+a_s_avg %>%
+    group_by(id, sedentary_avg) %>%
+    ggplot(aes(id, sedentary_avg)) +
+    geom_col(fill = "#85c0cb") + 
+    geom_hline(yintercept = 720) +
+    labs(title = "Daily Minutes Sedentary", x = "User Id", y = "Average Minutes") +
+    theme(plot.title = element_text(hjust = 0.5))
+a_s_avg %>%
+    group_by(id, calories_avg) %>%
+    ggplot(aes(id, calories_avg)) +
+    geom_col(fill = "#afa8ed") + 
+    geom_hline(yintercept = 2000) +
+    labs(title = "Daily Calories Burned", x = "User Id", y = "Average Calories") +
+    theme(plot.title = element_text(hjust = 0.5))
+a_s_avg %>%
+    group_by(id, daily_use) %>%
+    ggplot(aes(id, daily_use)) +
+    geom_col(fill = "#cfd7e1") + 
+    geom_hline(yintercept = 15) +
+    labs(title = "Daily Device Usage", x = "User Id", y = "Number of Days") +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+## Correlation between Steps & Sedentary vs Calories.
+```{r}
+ggplot(a_s_avg, aes(x=steps_avg, y=calories_avg))+
+  geom_smooth(color = "blue") + 
+  labs(title = "Steps vs Average Calories Burned", x = "Average Steps", y= "Calories Burned") +
+   theme(plot.title = element_text(hjust = 0.5, size=12))
+
+ggplot(a_s_avg, aes(x=sedentary_avg, y=calories_avg))+
+  geom_smooth(color = "blue") + 
+  labs(title = "Sedentary vs Calories Burned", x = "Average Time Sedentary", y= "Calories") +
+   theme(plot.title = element_text(hjust = 0.5, size=12))
+```
+
+```{r}
+p_avg %>%
+    group_by(brand, avg_price) %>%
+    ggplot(aes(brand, avg_price)) +
+    geom_col(fill = "#018704") + 
+    geom_hline(yintercept = 249) +
+    labs(title = "Cost of Smart Watches", x = "Brand", y = "Average Price (USD)") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))
+p_avg_brand_percent %>%
+    group_by(p_avg_brand, percent) %>%
+    ggplot(aes(x = "", y = percent, fill = p_avg_brand)) +
+    geom_col(color = "black") +
+    geom_text(aes(label = labels), position = position_stack(vjust = 0.5)) +
+    labs(title = "Cost of Smart Watches by Percent") +
+    labs(fill = "Cost vs Ivy\n") +
+    coord_polar("y") +
+    theme_bw() + 
+    theme(axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5, size=12, face = "bold"))
+```
