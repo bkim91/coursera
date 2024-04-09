@@ -1,0 +1,568 @@
+---
+title: "Case Study - BellaBeat and SmartWatch Analysis"
+author: "Bryan Kim"
+date: "2023-10-29"
+output: html_document
+resource_files:
+- dailyActivity_merged.csv
+- sleepDay_merged.csv
+- Smart watch prices.csv
+---
+
+```{markdown - Table of Contents}
+# Table of Contents
+* [1. Introduction](#intro_1)
+* [2. Ask Phase](#ask_2)
+	* [2.1. Business Task](#ask_2_1)
+* [3. Prepare Phase](#prepare_3)
+	* [3.1. Datasets](#prepare_3_1)
+	* [3.2. Data Accessibility](#prepare_3_2)
+	* [3.3. Data Verification](#prepare_3_3)
+	* [3.4. Data Credibility](#prepare_3_4)
+* [4. Process Phase](#process_4)
+	* [4.1. Opening Libraries](#process_4_1)
+	* [4.2. Importing Datasets](#process_4_2)
+	* [4.3. Preview Datasets](#process_4_3)
+	* [4.4. Cleaning Datasets](#process_4_4)
+		* [4.4.1. Format Column Names](#process_4_4_1)
+		* [4.4.2. Format Date and Time](#process_4_4_2)
+		* [4.4.3. Verify Unique Id’s & Smart Watch Models vs. Price](#process_4_4_3)
+		* [4.4.4. Verify Duplicates and Remove Invalid Data](#process_4_4_4)
+		* [4.4.5. Remove Special Characters and Spaces in Data](#process_4_4_5)
+		* [4.4.6. Merge Datasets and Rename Id’s](#process_4_4_6)
+* [5. Analysis Phase](#analysis_5)
+	* [5.1. Identify Range of Values and Outliers](#analysis_5_1)
+		* [5.1.1. IQR and Quartiles](#analysis_5_1_1)
+		* [5.1.2. Upper and Lower Limits to Identify Outliers](#analysis_5_1_2)
+	* [5.2. Finding Averages](#analysis_5_2)
+		* [5.2.1. Steps and Calories Burned per Day](#analysis_5_2_1)
+		* [5.2.2. Smart Watch Prices by Brand](#analysis_5_2_2)
+	* [5.3. Categorizing and Grouping Smart Watches](#analysis_5_3)
+        * [5.3.1. Categorizing Smart Watch by Price](#analysis_5_3_1)
+		* [5.3.2. Grouping Smart Watch Brands by Price](#analysis_5_3_2)
+        * [5.3.3. Categorizing Smart Watch by Sale Price](#analysis_5_3_3)
+		* [5.3.4. Grouping Smart Watch Brands by Sale Price](#analysis_5_3_4)        
+* [6. Share Phase](#share_6)
+	* [6.1. Average Daily Steps, Sleep, Time Sedentary, and Calories Burned by User](#share_6_1)
+	* [6.2. Looking for Correlations](#share_6_2)
+	* [6.3. Cost Comparisons Between Smart Watches and Bellabeat Ivy](#share_6_3)
+    	* [6.3.1. Average Cost and Categorization by Brand vs Bellabeat Ivy](#share_6_3_1)
+        * [6.3.2. Average Cost and Categorization by Brand vs Bellabeat Ivy Sale](#share_6_3_2)
+* [7. Act Phase - Conclusion](#act_7)
+```
+
+```{markdown - Introduction}
+ # <ins>1. Introduction<a class="anchor" id="intro_1"></a>
+
+Bellabeat is a wellness company that was founded in 2014 that provides customers with fashionable health trackers designed and engineered for women. 
+They provide multiple products that can track one's biometric readings such as daily activity, sleep, heart rate, stress-resistance, and even menstrual cycles, in order to help women maintain their wellness levels. 
+
+They have expanded over the past 9 years with multiple apps to help users keep track of their biometrics via the Bellabeat app, Period Diary app, and launched the Bellabeat+ membership in 2019.
+With the Bellabeat+ membership, users get access to their Wellness Coach, a personalized program, a daily plan, and workouts within the Bellabeat app in order to help one achieve their goals.
+---
+```
+
+```{markdown - Ask Phase}
+# <ins>2. Ask Phase<a class="anchor" id="ask_2"></a>
+
+## <ins>2.1. Business Task<a class="anchor" id="ask_2_1"></a>
+
+Identify habits and trends of consumers using other smart device fitness trackers to find new growth opportunities and provide high-level recommendations based on insights.
+
+Stakeholders
+* Urška Sršen: Bellabeat’s cofounder and Chief Creative Officer.
+* Sando Mur: Mathematician and Bellabeat’s Cofounder.
+* Bellabeat Marketing Analytics Team.
+---
+```
+
+```{markdown - Prepare Phase}
+# <ins>3. Prepare Phase<a class="anchor" id="prepare_3"></a>
+
+## <ins>3.1. Datasets<a class="anchor" id="prepare_3_1"></a>
+
+The datasets used for this case study is from the Fitbit Fitness Tracker Data by Mobius and Smart Watch prices by Kiattisak Rattanaporn.
+Both datasets are stored and downloaded from Kaggle.
+
+## <ins>3.2. Data Accessibility<a class="anchor" id="prepare_3_2"></a>
+
+Both datasets accessed were open-source.
+
+Mobius has dedicated the work to the public domain by waiting all their rights to the work worldwide under copyright law. This allows others to copy, modify, distribute, and perform the work, even for commercial purposes.
+
+Mobius. (2020). Fitbit Fitness Tracker Data, Version 1. Retrieved November 21, 2023 from https://www.kaggle.com/datasets/arashnic/fitbit/data.
+
+Kiattisak Rattanaporn has allowed others to share and adapt the material for any purpose, even commercially, as long as the appropriate credit is given by proving a link and indicating if changes were made.
+
+Rattanaporn, K. (2023, April). Smart Watch prices, Version 1. Retrieved November 21, 2023 from https://www.kaggle.com/datasets/rkiattisak/smart-watch-prices.
+
+
+## <ins>3.3. Data Verification<a class="anchor" id="prepare_3_3"></a>
+
+The Fitbit dataset was generated between 03/12/2016 - 05/12/2016 when thirty eligible Fitbit users consented to the submission of personal tracker data. From a distributed survey via Amazon Mechanical Turk, the data collected were outputs for physical activity, heart rate, and sleep.
+
+The Fitbit dataset provided us with 18 CSV documents, each with different quantitative data tracked by Fitbit.
+
+The Smart Watch dataset was compiled in April of 2023 from various sources such as official brand websites, online retailers, and tech blogs. The data collected were brand, model, operating system, connectivity, display type, display size, resolution, water resistance, battery life, heart rate monitor, GPS, and NFC.
+
+## <ins>3.4. Data Credibility<a class="anchor" id="prepare_3_4"></a>
+
+Both datasets have too few users or model types and therefore have a chance of providing a sampling bias.
+
+Due to the fact that there are only 30 users in the Fitbit dataset, it is much too small of a sample size to represent the entire population and also because it is only Fitbit users and not multiple smart watch companies, it could be skewed towards people who prefer that brand.
+
+There are multiple models of watches for each brand and there are new models being launched throughout the year which affects the prices of previous models; therefore it is constantly changing.
+
+Even for this case study, the price of the Bellabeat Ivy changed from the beginning of this project from 249 to 149 due to there being a sale. Therefore, it would be difficult to have an accurate representation of what the current market prices are and is constantly changing.
+
+---
+```
+
+
+```{markdown - Process Phase}
+# <ins>4. Process Phase<a class="anchor" id="process_4"></a>
+## <ins>4.1. Opening libraries<a class="anchor" id="process_4_1"></a>
+
+I installed tidyverse and data.table because tidyverse covers the majority of the packages I used throughout the project. However for the prepare phase, the times needed to be changed to be universal.
+```
+
+```{r tidyverse}
+install.packages("tidyverse")
+install.packages("data.table")
+library(tidyverse)
+library(data.table)
+```
+
+
+```{markdown - Importing Datasets}
+## <ins>4.2. Importing Datasets<a class="anchor" id="process_4_2"></a>
+I imported the 3 CSV files that had most of the data necessary for analysis. I did not use the datasets where it was broken down by every minute since the data I was looking for did not require that type of information but rather a daily amount. The smart watch prices file had all that I needed to compare values of other brands and models.
+```
+
+```{r}
+activity <- read.csv("C:/Datasets/dailyActivity_merged.csv")
+sleep <- read.csv("C:/Datasets/Sleepday_merged.csv")
+prices <- read.csv("C:/Datasets/Smart watch prices.csv")
+```
+
+
+```{markdown - Preview Datasets}
+## <ins>4.3. Preview Datasets<a class="anchor" id="process_4_3"></a>
+Previewing the datasets to see column names and types of data.
+```
+
+```{r}
+head(activity)
+str(activity)
+
+head(sleep)
+str(sleep)
+
+head(prices)
+str(prices)
+
+colnames(activity)
+colnames(sleep)
+colnames(prices)
+```
+
+
+```{markdown - Cleaning Datasets}
+## <ins>4.4. Cleaning Datasets<a class="anchor" id="process_4_4"></a>
+The data needs to be uniform in format and removal of invalid data.
+```
+
+
+```{markdown - Format Column Names}
+## <ins>4.4.1. Format Column Names<a class="anchor" id="process_4_4_1"></a>
+```
+
+```{r}
+a <- rename_with(activity, tolower)
+s <- rename_with(sleep, tolower)
+p <- rename_with(prices, tolower)
+```
+
+
+```{markdown - Format Data and Time}
+## <ins>4.4.2. Format Date and Time<a class="anchor" id="process_4_4_2"></a>
+```
+
+```{r}
+a <- a %>%
+  rename(date = activitydate) %>%
+  mutate(date = as_date(date, format = "%m/%d/%Y"))
+s <- s %>%
+  rename(date = sleepday) %>%
+  mutate(date = as_date(date, format = "%m/%d/%Y %I:%M:%S %p"))
+
+head(a)
+head(s)
+```
+
+
+```{markdown - Verify Unique Id's & Smart Watch Models vs Price}
+## <ins>4.4.3. Verifying unique Id's & Smart Watch Models vs Price<a class="anchor" id="process_4_4_3"></a>
+```
+
+```{r}
+n_distinct(a$id)
+n_distinct(s$id)
+n_distinct(p[2, 13])
+```
+
+
+```{markdown - Verify Duplicates, Remove Invalid Data, and Re-Verify}
+## <ins>4.4.4. Verify Duplicates, Remove Invalid Data, and Verify Duplicates Removed<a class="anchor" id="process_4_4_4"></a>
+```
+
+```{r}
+sum(duplicated(a))
+sum(duplicated(s))
+sum(duplicated(p[2, 13]))
+
+a["totalsteps"][a["totalsteps"] == 0] <- NA
+a_clean <- a %>%
+  distinct() %>%
+  drop_na()
+
+s_clean <- s %>%
+  distinct() %>%
+  drop_na()
+
+p_clean <- p[!apply(p == "", 1, all),]
+p_clean <- p_clean %>%
+  distinct() %>%
+  drop_na()
+
+p_clean <- unique(p_clean[ , c('brand', 'model', 'price..usd.')])
+
+sum(duplicated(a_clean))
+sum(duplicated(s_clean))
+sum(duplicated(p_clean))
+```
+
+
+```{markdown - Remove Special Characters and Spaces in Data}
+## <ins>4.4.5. Remove Special Characters and Spaces in Data<a class="anchor" id="process_4_4_5"></a>
+```
+
+```{r}
+p_trimmed <- p_clean %>%
+  mutate(price..usd.=str_squish(price..usd.))
+
+p_trimmed$price..usd. = as.numeric(gsub("[$,]", "", p_trimmed$price..usd.))
+
+range(p_trimmed$price..usd.)
+```
+
+
+```{markdown - Remove Special Characters and Spaces in Data}
+## <ins>4.4.5. Remove Special Characters and Spaces in Data<a class="anchor" id="process_4_4_5"></a>
+```
+
+```{markdown - Marge Datasets and Rename ID's}
+## <ins>4.4.6. Merge Datasets and Rename Id’s<a class="anchor" id="process_4_4_6"></a>
+```
+
+```{r}
+a_s <- merge(a_clean, s_clean, by = c("id", "date"))
+a_s <- a_s %>% group_by(id) %>% mutate(id = cur_group_id())
+
+head(a_s)
+```
+
+
+
+```{markdown - Analysis Phase}
+---
+# <ins>5. Analysis Phase<a class="anchor" id="analysis_5"></a>
+```
+
+```{markdown - Identify Range}
+## <ins>5.1. Identify Range of Values and Outliers<a class="anchor" id="analysis_5_1"></a>
+```
+
+```{r}
+range(a_s$totalsteps)
+range(a_s$totaltimeinbed)
+range(p_trimmed$price..usd.)
+```
+
+```{markdown - IQR and Quartiles}
+## <ins>5.1.1. IQR and Quartiles<a class="anchor" id="analysis_5_1_1"></a>
+```
+
+```{r}
+a_25 <- quantile(a_clean$totalsteps, .25)
+a_75 <- quantile(a_clean$totalsteps, .75)
+s_25 <- quantile(s_clean$totaltimeinbed, .25)
+s_75 <- quantile(s_clean$totaltimeinbed, .75)
+iqr_a <- IQR(a_clean$totalsteps)
+iqr_s <- IQR(s_clean$totaltimeinbed)
+```
+
+
+```{markdown - Upper and Lower Limits}
+## <ins>5.1.2. Upper and Lower Limits to Identify Outliers<a class="anchor" id="analysis_5_1_2"></a>
+
+The removal of outliers in the data points would get rid of data that may skew the results of the analysis as long as there is a valid reason to do so.
+Although there are data points outside of the upper and lower limits, it is not known whether the data is accurate of whether someone did not sleep much at all or slept majority of the day. Therefore the outliers for the dataset were not removed but this is an indication that the data is not as accurate as it could be.
+Also, there were much cheaper or expensive smart watches that were drastically different from the average, primarily the luxury smart watches, however they were correct values therefore these were kept for the analysis.
+```
+
+```{r}
+a_lower <- a_25 - 1.5*(iqr_a)
+a_upper <- a_75 + 1.5*(iqr_a)
+s_lower <- s_25 - 1.5*(iqr_s)
+s_upper <- s_75 + 1.5*(iqr_s)
+
+head(a_lower)
+head(a_upper)
+head(s_lower)
+head(s_upper)
+```
+
+```{markdown - Finding Averages}
+## <ins>5.2. Finding Averages<a class="anchor" id="analysis_5_2"></a>
+```
+
+```{markdown - Steps and Calories Burned per Day}
+## <ins>5.2.1. Steps and Calories Burned per Day<a class="anchor" id="analysis_5_2_1"></a>
+By using the average per day for each unique id, it gave a general overview of what each user did per day since there were some users with data every day and some with very few days in total.
+```
+
+```{r}
+a_s_avg <- a_s %>%
+  group_by(id) %>%
+  summarize(steps_avg = mean(totalsteps), sleep_avg = mean(totalminutesasleep), sedentary_avg = mean(sedentaryminutes), calories_avg = mean(calories), daily_use = sum(n()))
+
+head(a_s_avg)
+```
+
+```{markdown - Smart Watch Prices by Brand}
+ ## <ins>5.2.2. Smart Watch Prices by Brand<a class="anchor" id="analysis_5_2_2"></a>
+```
+
+```{r}
+p_avg <- p_trimmed %>%
+  group_by(brand) %>%
+  summarize(avg_price = mean(price..usd.))
+
+head(p_avg)
+```
+
+
+```{markdown}
+## <ins>5.3. Categorizing and Grouping Smart Watches<a class="anchor" id="analysis_5_3"></a>
+```
+
+```{markdown - Categhorizing by Price}
+## <ins>5.3.1. Categorizing Smart Watch by Price<a class="anchor" id="analysis_5_3_1"></a>
+```
+
+```{r}
+p_avg_brand <- p_avg %>%
+  select(brand, avg_price) %>%
+  mutate(p_avg_brand = case_when(
+    avg_price < 249 ~ "Less than Ivy",
+    avg_price == 249 ~ "Same as Ivy",
+    avg_price > 249 ~ "More than Ivy"
+  ))
+
+head(p_avg_brand)
+```
+
+
+```{markdown - Grouping Brands by Price}
+## <ins>5.3.2. Grouping Smart Watch Brands by Price<a class="anchor" id="analysis_5_3_2"></a>
+```
+
+```{r}
+p_avg_brand_percent <- p_avg_brand %>%
+  group_by(p_avg_brand) %>%
+  summarise(total = n()) %>%
+  mutate(sum = sum(total)) %>%
+  group_by(p_avg_brand) %>%
+  summarise(percent = total/sum) %>%
+  mutate(labels = scales::percent(percent))
+
+p_avg_brand_percent$p_avg_brand <- factor(p_avg_brand_percent$p_avg_brand, levels = c("More than Ivy", "Same as Ivy", "Less than Ivy"))
+
+head(p_avg_brand_percent)
+```
+
+
+```{markdown - Categorizing by Sale Price}
+## <ins>5.3.3. Categorizing Smart Watch by Sale Price<a class="anchor" id="analysis_5_3_3"></a>
+```
+
+```{r}
+p_avg_brand_sale <- p_avg %>%
+  select(brand, avg_price) %>%
+  mutate(p_avg_brand_sale = case_when(
+    avg_price < 149 ~ "Less than Ivy",
+    avg_price == 149 ~ "Same as Ivy",
+    avg_price > 149 ~ "More than Ivy"
+  ))
+
+head(p_avg_brand_sale)
+```
+
+
+```{markdown - Grouping Brands by Sale Price}
+## <ins>5.3.4. Grouping Smart Watch Brands by Sale Price<a class="anchor" id="analysis_5_3_4"></a>
+```
+
+```{r}
+p_avg_brand_percent_sale <- p_avg_brand_sale %>%
+  group_by(p_avg_brand_sale) %>%
+  summarise(total = n()) %>%
+  mutate(sum = sum(total)) %>%
+  group_by(p_avg_brand_sale) %>%
+  summarise(percent = total/sum) %>%
+  mutate(labels = scales::percent(percent))
+
+p_avg_brand_percent_sale$p_avg_brand_sale <- factor(p_avg_brand_percent_sale$p_avg_brand_sale, levels = c("More than Ivy", "Same as Ivy", "Less than Ivy"))
+
+head(p_avg_brand_percent_sale)
+```
+
+
+```{markdown - Averages}
+---
+# <ins>6. Share Phase<a class="anchor" id="share_6"></a>
+```
+
+```{r}
+a_s_avg %>%
+    group_by(id, steps_avg) %>%
+    ggplot(aes(id, steps_avg)) +
+    geom_col(fill = "#f38488") + 
+    geom_hline(yintercept = 7500) +
+    labs(title = "Daily Steps", x = "User Id", y = "Average Steps") +
+    theme(plot.title = element_text(hjust = 0.5))
+a_s_avg %>%
+    group_by(id, sleep_avg) %>%
+    ggplot(aes(id, sleep_avg)) +
+    geom_col(fill = "#344d70") + 
+    geom_hline(yintercept = 480) +
+    labs(title = "Daily Sleep", x = "User Id", y = "Average Asleep") +
+    theme(plot.title = element_text(hjust = 0.5))
+a_s_avg %>%
+    group_by(id, sedentary_avg) %>%
+    ggplot(aes(id, sedentary_avg)) +
+    geom_col(fill = "#85c0cb") + 
+    geom_hline(yintercept = 720) +
+    labs(title = "Daily Minutes Sedentary", x = "User Id", y = "Average Minutes") +
+    theme(plot.title = element_text(hjust = 0.5))
+a_s_avg %>%
+    group_by(id, calories_avg) %>%
+    ggplot(aes(id, calories_avg)) +
+    geom_col(fill = "#afa8ed") + 
+    geom_hline(yintercept = 2000) +
+    labs(title = "Daily Calories Burned", x = "User Id", y = "Average Calories") +
+    theme(plot.title = element_text(hjust = 0.5))
+a_s_avg %>%
+    group_by(id, daily_use) %>%
+    ggplot(aes(id, daily_use)) +
+    geom_col(fill = "#f9d62e") + 
+    geom_hline(yintercept = 15) +
+    labs(title = "Daily Device Usage", x = "User Id", y = "Number of Days") +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+```{markdown - Correlations}
+## <ins>6.2. Looking for Correlations<a class="anchor" id="share_6_2"></a>
+There is a general increase in calories burned by the number of steps each user took per day. However, there isn't a direct correlation with it because one could be sedentary for the majority of the day, therefore they spend time exercising in order to burn more calories throughout the day.
+```
+
+```{r}
+ggplot(a_s_avg, aes(x=steps_avg, y=calories_avg))+
+  geom_smooth(color = "blue") + 
+  labs(title = "Steps vs Average Calories Burned", x = "Average Steps", y= "Calories Burned") +
+   theme(plot.title = element_text(hjust = 0.5, size=12))
+
+ggplot(a_s_avg, aes(x=sedentary_avg, y=calories_avg))+
+  geom_smooth(color = "blue") + 
+  labs(title = "Sedentary vs Calories Burned", x = "Average Time Sedentary", y= "Calories") +
+   theme(plot.title = element_text(hjust = 0.5, size=12))
+```
+
+
+```{markdown - Cost Comparisons}
+## <ins>6.3. Cost Comparisons Between Smart Watches and Bellabeat Ivy<a class="anchor" id="share_6_3"></a>
+Bellabeat Ivy, however, is not a smart watch, just a fitness tracker. However, one is unlikely to wear a smart watch and a fitness tracker since smart watches would also track their biometrics.
+```
+
+```{markdown - Categorization by Cost}
+## <ins>6.3.1. Average Cost and Categorization by Brand vs Bellabeat Ivy<a class="anchor" id="share_6_3_1"></a>
+Brands had a similar price point for all their smart watches since they are marketing for a specific demographic or due to the technology implemented.
+```
+
+
+```{r}
+p_avg %>%
+    group_by(brand, avg_price) %>%
+    ggplot(aes(brand, avg_price)) +
+    geom_col(fill = "#018704") + 
+    geom_hline(yintercept = 249) +
+    labs(title = "Cost of Smart Watches", x = "Brand", y = "Average Price (USD)") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))
+p_avg_brand_percent %>%
+    group_by(p_avg_brand, percent) %>%
+    ggplot(aes(x = "", y = percent, fill = p_avg_brand)) +
+    geom_col(color = "black") +
+    geom_text(aes(label = labels), position = position_stack(vjust = 0.5)) +
+    labs(title = "Cost of Smart Watches by Percent") +
+    labs(fill = "Cost vs Ivy\n") +
+    coord_polar("y") +
+    theme_bw() + 
+    theme(axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5, size=12, face = "bold"))
+```
+
+```{markdown - Categorization by Sale Cost}
+## <ins>6.3.2. Average Cost and Categorization by Brand vs Bellabeat Ivy Sale<a class="anchor" id="share_6_3_2"></a>
+One the Bellabeat Ivy went on sale, it was much more competitive compared to smart watches and simply a fitness tracker.
+```
+
+```{r}
+p_avg %>%
+    group_by(brand, avg_price) %>%
+    ggplot(aes(brand, avg_price)) +
+    geom_col(fill = "#018704") + 
+    geom_hline(yintercept = 149) +
+    labs(title = "Cost of Smart Watches", x = "Brand", y = "Average Price (USD)") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))
+p_avg_brand_percent_sale %>%
+    group_by(p_avg_brand_sale, percent) %>%
+    ggplot(aes(x = "", y = percent, fill = p_avg_brand_sale)) +
+    geom_col(color = "black") +
+    geom_text(aes(label = labels), position = position_stack(vjust = 0.5)) +
+    labs(title = "Cost of Smart Watches by Percent") +
+    labs(fill = "Cost vs Ivy\n") +
+    coord_polar("y") +
+    theme_bw() + 
+    theme(axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5, size=12, face = "bold"))
+```
+
+
+```{markdown - Conclusion}
+---
+# <ins>7. Act Phase - Conclusion<a class="anchor" id="act_7"></a>
+
+Based on the data shown, users use fitness trackers and smart watches, however prices are comparable to the Bellabeat Ivy. Therefore, if one was debating whether they were to get the Ivy or a smart watch, one may choose a smart watch because of the dual ability of having a watch as well.
+Once the price of the Bellabeat Ivy dropped to 149 (USD) however, it is extremely competitive, which is why they are currently sold out for all model types! This is because now that the Ivy price point is no longer in the middle of smart watches but on the lower end, it isn't being seen as a similar product but something that is cheaper without the watch capability.
+Based on the price point that the Bellabeat Ivy is normally at, if they were to add a clock feature and kept it at the same price, it would be more competitive to other smart watches and beat out any fitness tracker without the clock feature.
+```
